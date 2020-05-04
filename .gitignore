@@ -33,3 +33,4 @@
 
 # CLion config
 .idea
+cmake-build-*

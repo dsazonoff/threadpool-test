@@ -61,20 +61,23 @@ void ThreadPool::ThreadFn(ThreadPool& pool)
 {
     for (;;)
     {
-        std::unique_lock lock{pool._m};
-        if (pool._queue.empty() && pool._isRunning)
-            pool._cv.wait(lock);
-        const bool needToExit = pool._queue.empty() && !pool._isRunning;
-        if (needToExit)
-            break;
-        if (pool._queue.empty())
-            continue;
+        std::unique_ptr<Task> task;
+        {
+            std::unique_lock lock{pool._m};
+            if (pool._queue.empty() && pool._isRunning)
+                pool._cv.wait(lock);
+            const bool needToExit = pool._queue.empty() && !pool._isRunning;
+            if (needToExit)
+                break;
+            if (pool._queue.empty())
+                continue;
 
-        auto task = std::move(pool._queue.front());
-        pool._queue.pop();
-        pool.notifyThreads();
-        lock.unlock();
-        task->run();
+            task = std::move(pool._queue.front());
+            pool._queue.pop();
+            pool.notifyThreads();
+        }
+
+        task->run(pool);
     }
 }
 
