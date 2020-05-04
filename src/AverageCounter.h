@@ -93,6 +93,7 @@ void AverageCounter<Container>::proceed(core::ThreadPool& pool)
 {
     (void)pool;
     Iterator it;
+    bool isLastIteration = false;
     {
         const std::lock_guard lock{_m};
         if (_it == _numbers.cend())
@@ -100,17 +101,15 @@ void AverageCounter<Container>::proceed(core::ThreadPool& pool)
 
         it = _it;
         ++_it;
+        ++_elementsProcessed;
+        isLastIteration = _elementsProcessed == _numbers.size();
     }
 
     _sum += *it;
 
-    {
-        const std::lock_guard lock{_m};
-        ++_elementsProcessed;
-        if (_elementsProcessed != _numbers.size())
-            return;
+    if (!isLastIteration)
+        return;
 
-        const float result = static_cast<float>(_sum) / _numbers.size();
-        _result.set_value(result);
-    }
+    const float result = static_cast<float>(_sum) / _numbers.size();
+    _result.set_value(result);
 }
