@@ -11,7 +11,7 @@
 
 namespace core
 {
-    class ThreadPool;
+class ThreadPool;
 }
 
 
@@ -19,6 +19,8 @@ class NumberStorage
 {
 public:
     NumberStorage(const std::initializer_list<int>& numbers = {});
+    template <typename It>
+    NumberStorage(const It& begin, const It& end);
     ~NumberStorage() = default;
 
     std::mutex& mutex();
@@ -27,6 +29,8 @@ public:
 
     bool popNumbers(int& v1, int& v2);
     void pushSum(int sum);
+    size_t numbersLeft() const;
+    size_t baseAmount() const;
 
 public:
     static void launch(NumberStorage& storage, core::ThreadPool& pool);
@@ -38,6 +42,14 @@ private:
     size_t _sumsDone = 0;
     std::mutex _m;
 };
+
+template <typename It>
+NumberStorage::NumberStorage(const It& begin, const It& end)
+    : _baseAmount{static_cast<size_t>(std::distance(begin, end))}
+{
+    for(auto it = begin; it != end; ++it)
+        _numbers.push(*it);
+}
 
 
 class AccumulateTask

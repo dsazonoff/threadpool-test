@@ -37,6 +37,11 @@ void ThreadPool::stop(bool clearQueue)
         t.join();
 }
 
+size_t ThreadPool::threadCount() const
+{
+    return _threads.size();
+}
+
 void ThreadPool::notifyThreads()
 {
     switch (_queue.size())

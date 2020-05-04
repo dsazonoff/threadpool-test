@@ -1,6 +1,7 @@
 #include "Adder.h"
 
 #include <cassert>
+#include <iostream>
 
 #include "ThreadPool.h"
 
@@ -53,7 +54,23 @@ std::future<float> NumberStorage::result()
 
 void NumberStorage::launch(NumberStorage& storage, core::ThreadPool& pool)
 {
-    pool.push(std::make_unique<AccumulateTask>(storage, pool));
+    std::vector<std::unique_ptr<AccumulateTask>> tasks;
+    const auto nInitialTasks = storage._baseAmount / 2;
+    tasks.reserve(nInitialTasks);
+    for (auto i = 0; i < nInitialTasks; ++i)
+        tasks.emplace_back(std::make_unique<AccumulateTask>(storage, pool));
+
+    pool.push(tasks.begin(), tasks.end());
+}
+
+size_t NumberStorage::numbersLeft() const
+{
+    return _numbers.size();
+}
+
+size_t NumberStorage::baseAmount() const
+{
+    return _baseAmount;
 }
 
 
@@ -74,13 +91,25 @@ void AccumulateTask::run()
         std::lock_guard lock{_storage.mutex()};
         if (!_storage.popNumbers(v1, v2))
             return;
+
+#if false
+        // Debug trace
+        {
+            static std::mutex coutLock;
+            std::lock_guard lock{coutLock};
+            std::cout << "Thread: " << std::this_thread::get_id() << " Sum: " << v1 << " + " << v2<<  std::endl;
+        }
+#endif
     }
 
     auto result = fn(v1, v2);
+    bool needNewTask = false;
     {
         std::lock_guard lock{_storage.mutex()};
         _storage.pushSum(result);
-        if (!_storage.isFinished())
-            NumberStorage::launch(_storage, _pool);
+        needNewTask = _storage.numbersLeft() >= 2;
     }
+
+    if (needNewTask)
+        _pool.push(std::make_unique<AccumulateTask>(_storage, _pool));
 }

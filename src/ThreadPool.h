@@ -25,6 +25,7 @@ public:
     template <typename It>
     void push(const It& begin, const It& end);
     void stop(bool clearQueue = false);
+    size_t threadCount() const;
 
 private:
     void notifyThreads();
@@ -45,7 +46,7 @@ void ThreadPool::push(std::unique_ptr<T>&& task)
 {
     static_assert(std::is_base_of_v<Task, T>);
 
-    std::unique_lock lock{_m};
+    const std::unique_lock lock{_m};
     _queue.emplace(std::move(task));
     notifyThreads();
 }
@@ -53,7 +54,7 @@ void ThreadPool::push(std::unique_ptr<T>&& task)
 template <typename It>
 void ThreadPool::push(const It& begin, const It& end)
 {
-    std::unique_lock lock{_m};
+    const std::unique_lock lock{_m};
     std::for_each(begin, end, [&q = _queue](auto& task)
     {
         q.emplace(std::move(task));
